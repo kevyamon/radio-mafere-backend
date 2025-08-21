@@ -41,4 +41,4 @@ const getPosts = async (req, res) => {
   }
 };
 
-module.exports = { createPost, getPosts };s
+module.exports = { createPost, getPosts };

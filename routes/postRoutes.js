@@ -1,14 +1,15 @@
 // routes/postRoutes.js
 const express = require('express');
 const router = express.Router();
-const { createPost, getPosts } = require('../controllers/postController');
+const { createPost, getPosts, likePost } = require('../controllers/postController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Route pour récupérer tous les posts (publique)
-router.get('/', getPosts);
+// On utilise router.route() pour chainer les requêtes sur la même URL de base
 
-// Route pour créer un post (protégée)
-// Le middleware `protect` s'exécutera avant `createPost`
-router.post('/', protect, createPost);
+// /api/posts
+router.route('/').get(getPosts).post(protect, createPost);
+
+// /api/posts/:id/like
+router.route('/:id/like').put(protect, likePost); // NOUVELLE ROUTE
 
 module.exports = router;

@@ -16,44 +16,69 @@ const createPost = async (req, res) => {
   }
 };
 
-// --- Récupérer tous les posts (inchangé) ---
+// --- Récupérer tous les posts (mis à jour) ---
 const getPosts = async (req, res) => {
   try {
-    const posts = await Post.find({}).populate('author', 'username prenom').sort({ createdAt: -1 });
+    const posts = await Post.find({})
+      .populate('author', 'username prenom') // Popule l'auteur du post
+      .populate('comments.author', 'username prenom') // Popule l'auteur de chaque commentaire
+      .sort({ createdAt: -1 });
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: 'Erreur du serveur', error: error.message });
   }
 };
 
-// --- NOUVELLE FONCTION : Liker/Unliker un post ---
-// @desc    Liker ou unliker un post
-// @route   PUT /api/posts/:id/like
-// @access  Privé
+// --- Liker/Unliker un post (inchangé) ---
 const likePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).json({ message: 'Post non trouvé' });
     }
-
-    // On vérifie si l'utilisateur (req.user._id) a déjà liké le post
-    // post.likes est un tableau d'IDs, on cherche si l'ID de l'utilisateur y est
     if (post.likes.includes(req.user._id)) {
-      // Si oui, on retire son like (unlike)
-      post.likes = post.likes.filter(
-        (likeId) => likeId.toString() !== req.user._id.toString()
-      );
+      post.likes = post.likes.filter((id) => id.toString() !== req.user._id.toString());
     } else {
-      // Si non, on ajoute son like
       post.likes.push(req.user._id);
     }
-
-    const updatedPost = await post.save();
-    res.json(updatedPost);
+    await post.save();
+    res.json(post);
   } catch (error) {
     res.status(500).json({ message: 'Erreur du serveur', error: error.message });
   }
 };
 
-module.exports = { createPost, getPosts, likePost }; // On exporte la nouvelle fonction
+// --- NOUVELLE FONCTION : Ajouter un commentaire ---
+// @desc    Commenter un post
+// @route   POST /api/posts/:id/comments
+// @access  Privé
+const addCommentToPost = async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ message: 'Le commentaire ne peut pas être vide.' });
+  }
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post non trouvé' });
+    }
+
+    const newComment = {
+      text: text,
+      author: req.user._id,
+    };
+
+    post.comments.push(newComment);
+    await post.save();
+
+    // On re-popule le commentaire ajouté pour renvoyer le nom de l'auteur
+    const populatedPost = await Post.findById(post._id).populate('comments.author', 'username prenom');
+    const addedComment = populatedPost.comments[populatedPost.comments.length - 1];
+
+    res.status(201).json(addedComment);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+  }
+};
+
+module.exports = { createPost, getPosts, likePost, addCommentToPost };

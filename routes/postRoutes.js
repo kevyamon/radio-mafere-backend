@@ -11,4 +11,4 @@ router.get('/', getPosts);
 // Le middleware `protect` s'exécutera avant `createPost`
 router.post('/', protect, createPost);
 
-module.exports = router;s
+module.exports = router;

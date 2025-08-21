@@ -1,12 +1,14 @@
 // routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
-const { getAllUsers } = require('../controllers/userController');
+const { getAllUsers, updateUserStatus } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const { admin } = require('../middleware/adminMiddleware');
 
-// On applique les deux middlewares. La requête passera d'abord par `protect`,
-// puis si c'est bon, par `admin`, avant d'arriver à `getAllUsers`.
+// GET /api/users -> Récupérer tous les utilisateurs
 router.route('/').get(protect, admin, getAllUsers);
+
+// PUT /api/users/:id/status -> Mettre à jour le statut d'un utilisateur
+router.route('/:id/status').put(protect, admin, updateUserStatus); // NOUVELLE ROUTE
 
 module.exports = router;

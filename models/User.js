@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
     enum: ['actif', 'bloqué', 'banni'], 
     default: 'actif' 
   },
-}, { timestamps: true }); // timestamps ajoute createdAt et updatedAt
+}, { timestamps: true });
 
 // Middleware pour hacher le mot de passe avant de sauvegarder
 userSchema.pre('save', async function (next) {
@@ -31,6 +31,11 @@ userSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+// NOUVELLE MÉTHODE : Pour comparer les mots de passe lors de la connexion
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

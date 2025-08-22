@@ -1,6 +1,5 @@
 // socket.js
 let io;
-let connectedUsers = {}; // Objet pour mapper userId -> socketId
 
 const initSocket = (httpServer) => {
   io = require('socket.io')(httpServer, {
@@ -11,23 +10,17 @@ const initSocket = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`🔌 Nouvel utilisateur connecté: ${socket.id}`);
+    console.log(`🔌 Nouvel appareil connecté: ${socket.id}`);
 
-    // Quand un utilisateur s'identifie après la connexion
+    // Quand un utilisateur s'identifie, on le fait rejoindre son salon privé
     socket.on('user_connected', (userId) => {
-      console.log(`🔗 Utilisateur ${userId} associé au socket ${socket.id}`);
-      connectedUsers[userId] = socket.id;
+      socket.join(userId);
+      console.log(`🔗 Appareil ${socket.id} a rejoint le salon de l'utilisateur ${userId}`);
     });
 
     socket.on('disconnect', () => {
-      console.log(`🔌 Utilisateur déconnecté: ${socket.id}`);
-      // On le retire de notre liste d'utilisateurs connectés
-      for (const userId in connectedUsers) {
-        if (connectedUsers[userId] === socket.id) {
-          delete connectedUsers[userId];
-          break;
-        }
-      }
+      console.log(`🔌 Appareil déconnecté: ${socket.id}`);
+      // Socket.IO gère automatiquement le départ des salons lors de la déconnexion
     });
   });
 
@@ -41,16 +34,11 @@ const getIo = () => {
   return io;
 };
 
-// Fonction pour envoyer un événement à un utilisateur spécifique
+// Fonction pour envoyer un événement à tous les appareils d'un utilisateur
 const emitToUser = (userId, event, data) => {
-  const socketId = connectedUsers[userId];
-  if (socketId) {
-    getIo().to(socketId).emit(event, data);
-    console.log(`🚀 Envoi de l'événement '${event}' à l'utilisateur ${userId}`);
-    return true;
-  }
-  console.log(`- Utilisateur ${userId} non trouvé ou non connecté.`);
-  return false;
+  // On diffuse l'événement dans le salon de l'utilisateur
+  getIo().to(userId).emit(event, data);
+  console.log(`🚀 Diffusion de l'événement '${event}' dans le salon de l'utilisateur ${userId}`);
 };
 
 module.exports = { initSocket, getIo, emitToUser };

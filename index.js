@@ -3,14 +3,19 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const http = require('http'); // On importe le module http natif de Node.js
+const { initSocket } = require('./socket'); // On importe notre initialiseur de socket
 
 // On importe les routes
 const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
-const statsRoutes = require('./routes/statsRoutes'); // NOUVELLE ROUTE
+const statsRoutes = require('./routes/statsRoutes');
 
 const app = express();
+const server = http.createServer(app); // On crée un serveur http à partir de notre app Express
+const io = initSocket(server); // On attache Socket.IO à notre serveur http
+
 const PORT = process.env.PORT || 5005; 
 
 app.use(cors({
@@ -27,8 +32,9 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/stats', statsRoutes); // NOUVEAU
+app.use('/api/stats', statsRoutes);
 
-app.listen(PORT, () => {
+// On utilise server.listen au lieu de app.listen
+server.listen(PORT, () => {
   console.log(`🚀 Le serveur de Radio Maféré écoute sur le port ${PORT}`);
 });

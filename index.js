@@ -7,7 +7,8 @@ const mongoose = require('mongoose');
 // On importe les routes
 const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
-const userRoutes = require('./routes/userRoutes'); // NOUVELLE ROUTE
+const userRoutes = require('./routes/userRoutes');
+const statsRoutes = require('./routes/statsRoutes'); // NOUVELLE ROUTE
 
 const app = express();
 const PORT = process.env.PORT || 5005; 
@@ -25,7 +26,8 @@ mongoose.connect(process.env.MONGO_URI)
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
-app.use('/api/users', userRoutes); // NOUVEAU
+app.use('/api/users', userRoutes);
+app.use('/api/stats', statsRoutes); // NOUVEAU
 
 app.listen(PORT, () => {
   console.log(`🚀 Le serveur de Radio Maféré écoute sur le port ${PORT}`);

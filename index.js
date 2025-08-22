@@ -11,12 +11,13 @@ const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const eventRoutes = require('./routes/eventRoutes'); // <-- NOUVELLE LIGNE
 
 const app = express();
 const server = http.createServer(app); // On crée un serveur http à partir de notre app Express
 const io = initSocket(server); // On attache Socket.IO à notre serveur http
 
-const PORT = process.env.PORT || 5005; 
+const PORT = process.env.PORT || 5005;
 
 app.use(cors({
   origin: [process.env.FRONTEND_URL, 'http://localhost:5173'],
@@ -33,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/events', eventRoutes); // <-- NOUVELLE LIGNE
 
 // On utilise server.listen au lieu de app.listen
 server.listen(PORT, () => {

@@ -1,17 +1,12 @@
 // controllers/authController.js
 const User = require('../models/User');
-const LoginHistory = require('../models/LoginHistory'); // On importe le nouveau modèle
+const LoginHistory = require('../models/LoginHistory');
 const generateToken = require('../utils/generateToken');
-
-// --- Fonction d'inscription (inchangée) ---
-const registerUser = async (req, res) => {
-  // ... (code inchangé)
-};
+const { getIo } = require('../socket'); // On importe la capacité de parler en temps réel
 
 // --- Fonction de Connexion (Mise à jour) ---
 const loginUser = async (req, res) => {
   const { login, password } = req.body;
-
   try {
     const user = await User.findOne({
       $or: [{ email: login }, { username: login }, { telephone: login }],
@@ -19,23 +14,18 @@ const loginUser = async (req, res) => {
 
     if (user && (await user.matchPassword(password))) {
       if (user.statut === 'banni') {
-        return res.status(403).json({ 
-          isBanned: true,
-          message: 'Votre compte a été banni. Veuillez contacter un administrateur.' 
-        });
+        return res.status(403).json({ isBanned: true, message: 'Votre compte a été banni.' });
       }
 
-      // NOUVELLE ACTION : On enregistre la connexion dans l'historique
       await LoginHistory.create({ user: user._id });
 
-      // On renvoie les infos de l'utilisateur avec le token
+      // NOUVELLE ACTION : On envoie un signal pour rafraîchir les stats
+      getIo().emit('stats_updated');
+
       res.json({
         _id: user._id,
         prenom: user.prenom,
-        nom: user.nom,
-        username: user.username,
-        email: user.email,
-        role: user.role,
+        // ... autres infos ...
         token: generateToken(user._id),
       });
     } else {
@@ -46,23 +36,30 @@ const loginUser = async (req, res) => {
   }
 };
 
-// --- Code de registerUser pour la complétude ---
-const registerUserFunc = async (req, res) => {
+
+// --- Code complet pour la lisibilité ---
+const registerUser = async (req, res) => {
   const { prenom, nom, username, email, telephone, password } = req.body;
   try {
     const userExists = await User.findOne({ $or: [{ email }, { username }, { telephone }] });
-    if (userExists) {
-      return res.status(400).json({ message: 'Un utilisateur avec cet email, nom d\'utilisateur ou téléphone existe déjà.' });
-    }
+    if (userExists) { return res.status(400).json({ message: 'Un utilisateur avec cet email, nom d\'utilisateur ou téléphone existe déjà.' }); }
     const user = await User.create({ prenom, nom, username, email, telephone, password });
-    if (user) {
-      res.status(201).json({ message: 'Utilisateur créé avec succès !' });
-    } else {
-      res.status(400).json({ message: 'Données utilisateur invalides.' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Erreur du serveur', error: error.message });
-  }
+    if (user) { res.status(201).json({ message: 'Utilisateur créé avec succès !' }); } 
+    else { res.status(400).json({ message: 'Données utilisateur invalides.' }); }
+  } catch (error) { res.status(500).json({ message: 'Erreur du serveur', error: error.message }); }
 };
 
-module.exports = { registerUser: registerUserFunc, loginUser };
+const loginUserComplete = async (req, res) => {
+  const { login, password } = req.body;
+  try {
+    const user = await User.findOne({ $or: [{ email: login }, { username: login }, { telephone: login }] });
+    if (user && (await user.matchPassword(password))) {
+      if (user.statut === 'banni') { return res.status(403).json({ isBanned: true, message: 'Votre compte a été banni. Veuillez contacter un administrateur.' }); }
+      await LoginHistory.create({ user: user._id });
+      getIo().emit('stats_updated');
+      res.json({ _id: user._id, prenom: user.prenom, nom: user.nom, username: user.username, email: user.email, role: user.role, token: generateToken(user._id) });
+    } else { res.status(401).json({ message: 'Identifiants invalides.' }); }
+  } catch (error) { res.status(500).json({ message: 'Erreur du serveur', error: error.message }); }
+};
+
+module.exports = { registerUser, loginUser: loginUserComplete };

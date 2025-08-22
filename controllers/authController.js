@@ -21,18 +21,25 @@ const registerUser = async (req, res) => {
   }
 };
 
-// --- NOUVELLE FONCTION : Connexion ---
+// --- Fonction de Connexion (Mise à jour) ---
 const loginUser = async (req, res) => {
-  const { login, password } = req.body; // "login" peut être email, username, ou telephone
+  const { login, password } = req.body;
 
   try {
-    // Chercher l'utilisateur par l'un des trois identifiants
     const user = await User.findOne({
       $or: [{ email: login }, { username: login }, { telephone: login }],
     });
 
-    // Si l'utilisateur existe ET que le mot de passe est correct
     if (user && (await user.matchPassword(password))) {
+      // NOUVELLE VÉRIFICATION : L'utilisateur est-il banni ?
+      if (user.statut === 'banni') {
+        return res.status(403).json({ // On utilise le statut 403 Forbidden
+          isBanned: true,
+          message: 'Votre compte a été banni. Veuillez contacter un administrateur.' 
+        });
+      }
+
+      // Si tout est bon, on renvoie les infos de l'utilisateur avec le token
       res.json({
         _id: user._id,
         prenom: user.prenom,
@@ -40,7 +47,7 @@ const loginUser = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id), // On lui donne son token
+        token: generateToken(user._id),
       });
     } else {
       res.status(401).json({ message: 'Identifiants invalides.' });
@@ -50,4 +57,4 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser }; // On exporte la nouvelle fonction
+module.exports = { registerUser, loginUser };

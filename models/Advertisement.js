@@ -12,6 +12,10 @@ const advertisementSchema = new mongoose.Schema(
       type: String, // Sera une URL, probablement hébergée sur Cloudinary
       required: true,
     },
+    imagePublicId: { // NOUVEAU CHAMP
+      type: String,
+      required: true,
+    },
     targetUrl: {
       type: String, // Le site web vers lequel la pub redirige
       required: true,
@@ -29,7 +33,6 @@ const advertisementSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    // On pourrait ajouter des dates de début/fin de campagne plus tard
   },
   { timestamps: true }
 );

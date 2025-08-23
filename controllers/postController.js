@@ -1,6 +1,18 @@
 // controllers/postController.js
 const Post = require('../models/Post');
-const { getIo } = require('../socket'); // On importe la capacité de parler en temps réel
+const User = require('../models/User'); // <-- NOUVELLE LIGNE
+const Notification = require('../models/Notification'); // <-- NOUVELLE LIGNE
+const { getIo } = require('../socket');
+
+// Fonction pour notifier les admins
+const notifyAdmins = async (notificationData) => {
+  const admins = await User.find({ role: { $in: ['admin', 'super_admin'] } });
+  admins.forEach(admin => {
+    Notification.create({ ...notificationData, recipient: admin._id });
+  });
+  // On envoie un signal pour dire aux admins de rafraîchir leurs notifications
+  getIo().to('admins').emit('new_notification');
+};
 
 // @desc    Créer un nouveau post
 // @route   POST /api/posts
@@ -14,12 +26,19 @@ const createPost = async (req, res) => {
     const post = new Post({ content, type, author: req.user._id });
     const createdPost = await post.save();
     
-    // On popule l'auteur pour avoir son nom avant de l'envoyer
     const populatedPost = await Post.findById(createdPost._id).populate('author', 'username prenom');
 
-    // ÉMISSION EN TEMPS RÉEL !
-    // On envoie le nouveau post à TOUS les utilisateurs connectés
     getIo().emit('new_post', populatedPost);
+
+    // --- NOUVELLE PARTIE : CRÉATION DE LA NOTIFICATION ---
+    if (type === 'dédicace') {
+      notifyAdmins({
+        message: `${populatedPost.author.prenom} a fait une nouvelle dédicace.`,
+        type: 'nouvelle_dédicace',
+        link: `/home#post-${createdPost._id}` // Lien direct vers le post
+      });
+    }
+    // --- FIN DE LA NOUVELLE PARTIE ---
 
     res.status(201).json(populatedPost);
   } catch (error) {

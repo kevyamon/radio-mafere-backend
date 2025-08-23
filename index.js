@@ -13,7 +13,8 @@ const userRoutes = require('./routes/userRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
-const advertisementRoutes = require('./routes/advertisementRoutes'); // <-- NOUVELLE LIGNE
+const advertisementRoutes = require('./routes/advertisementRoutes');
+const notificationRoutes = require('./routes/notificationRoutes'); // <-- NOUVELLE LIGNE
 
 const app = express();
 const server = http.createServer(app); // On crée un serveur http à partir de notre app Express
@@ -38,7 +39,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/announcements', announcementRoutes);
-app.use('/api/advertisements', advertisementRoutes); // <-- NOUVELLE LIGNE
+app.use('/api/advertisements', advertisementRoutes);
+app.use('/api/notifications', notificationRoutes); // <-- NOUVELLE LIGNE
 
 // On utilise server.listen au lieu de app.listen
 server.listen(PORT, () => {

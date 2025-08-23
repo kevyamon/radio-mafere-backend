@@ -12,16 +12,22 @@ const createAnnouncement = async (req, res) => {
   }
 
   try {
+    // On récupère les informations des fichiers uploadés par multer/cloudinary
+    const images = req.files.map(file => ({
+      url: file.path,
+      public_id: file.filename
+    }));
+
     const announcement = new Announcement({
       title,
       content,
       category,
       contactInfo,
+      images, // On ajoute les informations des images
       author: req.user._id,
     });
 
     const createdAnnouncement = await announcement.save();
-    // On pourrait notifier les admins ici via Socket.IO dans une future version
     res.status(201).json(createdAnnouncement);
   } catch (error) {
     res.status(500).json({ message: "Erreur du serveur lors de la création de l'annonce.", error: error.message });

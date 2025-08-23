@@ -31,10 +31,17 @@ const announcementSchema = new mongoose.Schema(
       enum: ['en_attente', 'approuvée', 'rejetée'],
       default: 'en_attente',
     },
-    contactInfo: { // Champ optionnel pour que l'auteur puisse laisser un contact
+    contactInfo: { 
       type: String,
       trim: true,
     },
+    // NOUVEAU CHAMP POUR LES IMAGES
+    images: [
+      {
+        url: { type: String, required: true }, // L'URL de l'image sur Cloudinary
+        public_id: { type: String, required: true }, // L'ID public pour pouvoir la supprimer plus tard
+      }
+    ],
   },
   { timestamps: true }
 );

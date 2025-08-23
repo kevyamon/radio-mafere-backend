@@ -43,7 +43,43 @@ const getUpcomingEvents = async (req, res) => {
   }
 };
 
+// @desc    Participer ou se désinscrire d'un événement
+// @route   PUT /api/events/:id/participate
+// @access  Privé (pour les utilisateurs connectés)
+const toggleParticipation = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({ message: "Événement non trouvé." });
+    }
+
+    // On vérifie si l'utilisateur participe déjà
+    const isParticipating = event.participants.some(participantId => participantId.toString() === req.user._id.toString());
+
+    if (isParticipating) {
+      // Si oui, on le retire de la liste
+      event.participants = event.participants.filter(participantId => participantId.toString() !== req.user._id.toString());
+    } else {
+      // Sinon, on l'ajoute à la liste
+      event.participants.push(req.user._id);
+    }
+
+    const updatedEvent = await event.save();
+    
+    // On re-popule les participants pour renvoyer une liste complète au frontend
+    await updatedEvent.populate('participants', 'prenom nom');
+
+    res.json(updatedEvent);
+
+  } catch (error) {
+    res.status(500).json({ message: "Erreur du serveur.", error: error.message });
+  }
+};
+
+
 module.exports = {
   createEvent,
   getUpcomingEvents,
+  toggleParticipation, // <-- On exporte la nouvelle fonction
 };

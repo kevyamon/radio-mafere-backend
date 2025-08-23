@@ -1,6 +1,6 @@
 // controllers/advertisementController.js
 const Advertisement = require('../models/Advertisement');
-const upload = require('../config/cloudinary'); // On aura besoin de notre uploader
+const upload = require('../config/cloudinary');
 
 // @desc    Créer une nouvelle publicité (réservé aux admins)
 // @route   POST /api/advertisements
@@ -36,7 +36,6 @@ const createAdvertisement = async (req, res) => {
 const getActiveAdvertisements = async (req, res) => {
   try {
     const ads = await Advertisement.find({ status: 'active' });
-    // On pourrait ajouter une logique pour incrémenter les vues ici
     res.json(ads);
   } catch (error) {
     res.status(500).json({ message: 'Erreur du serveur lors de la récupération des publicités.', error: error.message });
@@ -50,14 +49,26 @@ const recordClick = async (req, res) => {
     try {
         const ad = await Advertisement.findById(req.params.id);
         if (!ad) {
-            return res.status(404).json({ message: 'Publicité non trouvée.' });
+            // Si la pub n'existe pas, on redirige vers la page d'accueil pour éviter un crash
+            return res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
         }
+        
         ad.clicks += 1;
         await ad.save();
-        // On redirige l'utilisateur vers l'URL de destination
-        res.redirect(ad.targetUrl);
+
+        // --- CORRECTION CLÉ ---
+        // On s'assure que l'URL est absolue avant de rediriger
+        let destinationUrl = ad.targetUrl;
+        if (!/^https?:\/\//i.test(destinationUrl)) {
+            destinationUrl = `https://${destinationUrl}`;
+        }
+        
+        res.redirect(destinationUrl);
+
     } catch (error) {
-        res.status(500).json({ message: 'Erreur du serveur.' });
+        // En cas d'erreur, on redirige aussi pour ne pas bloquer l'utilisateur
+        console.error("Erreur lors de l'enregistrement du clic:", error);
+        res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
     }
 };
 

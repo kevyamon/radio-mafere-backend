@@ -16,7 +16,8 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const advertisementRoutes = require('./routes/advertisementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
-const messageRoutes = require('./routes/messageRoutes'); // <-- NOUVELLE LIGNE
+const messageRoutes = require('./routes/messageRoutes');
+const locationRoutes = require('./routes/locationRoutes'); // <-- NOUVELLE LIGNE
 
 const app = express();
 const server = http.createServer(app);
@@ -44,7 +45,8 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/messages', messageRoutes); // <-- NOUVELLE LIGNE
+app.use('/api/messages', messageRoutes);
+app.use('/api/location', locationRoutes); // <-- NOUVELLE LIGNE
 
 server.listen(PORT, () => {
   console.log(`🚀 Le serveur de Radio Maféré écoute sur le port ${PORT}`);

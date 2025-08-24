@@ -13,11 +13,10 @@ const getConversations = async (req, res) => {
     const conversations = await Conversation.find({ participants: userId })
       .populate({
         path: 'participants',
-        select: 'prenom username photo', // On récupère les infos de l'autre participant
+        select: 'prenom username photo',
       })
-      .sort({ updatedAt: -1 }); // Les plus récentes d'abord
+      .sort({ updatedAt: -1 });
 
-    // On formate pour que le frontend reçoive directement les infos de l'autre utilisateur
     const formattedConversations = conversations.map(conv => {
         const otherParticipant = conv.participants.find(p => p._id.toString() !== userId.toString());
         return {
@@ -42,7 +41,6 @@ const getMessages = async (req, res) => {
     const { conversationId } = req.params;
     const userId = req.user._id;
 
-    // On vérifie que l'utilisateur fait bien partie de la conversation
     const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
     if (!conversation) {
         return res.status(403).json({ message: "Accès non autorisé à cette conversation." });
@@ -66,12 +64,10 @@ const sendMessage = async (req, res) => {
 
         if (!text) return res.status(400).json({ message: "Le message ne peut être vide." });
 
-        // On vérifie si une conversation existe déjà entre les deux utilisateurs
         let conversation = await Conversation.findOne({
             participants: { $all: [senderId, recipientId] },
         });
 
-        // Si non, on en crée une nouvelle
         if (!conversation) {
             conversation = await Conversation.create({
                 participants: [senderId, recipientId],
@@ -86,20 +82,83 @@ const sendMessage = async (req, res) => {
 
         await newMessage.save();
 
-        // On met à jour la conversation avec le dernier message
         conversation.lastMessage = {
             text,
             sender: senderId,
             createdAt: newMessage.createdAt,
         };
         await conversation.save();
+        
+        // On peuple l'info du sender avant de l'envoyer par socket
+        const populatedMessage = await Message.findById(newMessage._id).populate('senderId', 'prenom');
+        
+        const recipient = conversation.participants.find(p => p.toString() !== senderId.toString());
+        emitToUser(recipient.toString(), 'new_message', populatedMessage);
 
-        // --- TEMPS RÉEL avec Socket.IO ---
-        // On envoie le nouveau message directement au destinataire s'il est connecté
-        emitToUser(recipientId, 'new_message', newMessage);
+        res.status(201).json(populatedMessage);
 
-        res.status(201).json(newMessage);
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+    }
+};
 
+// --- NOUVELLES FONCTIONS ---
+
+// @desc    Supprimer un message
+// @route   DELETE /api/messages/:messageId
+// @access  Privé
+const deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ message: "Message non trouvé." });
+        }
+
+        // On vérifie que l'utilisateur est bien l'auteur du message
+        if (message.senderId.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Action non autorisée." });
+        }
+
+        await message.deleteOne();
+
+        // Optionnel : Mettre à jour le "lastMessage" de la conversation si c'était ce message
+        // Pour la simplicité, nous allons laisser le frontend gérer le rafraîchissement complet
+
+        res.json({ message: "Message supprimé avec succès." });
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+    }
+};
+
+// @desc    Modifier un message
+// @route   PUT /api/messages/:messageId
+// @access  Privé
+const updateMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { text } = req.body;
+        const userId = req.user._id;
+
+        if (!text) return res.status(400).json({ message: "Le message ne peut être vide." });
+
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ message: "Message non trouvé." });
+        }
+
+        if (message.senderId.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Action non autorisée." });
+        }
+
+        message.text = text;
+        await message.save();
+
+        res.json(message);
     } catch (error) {
         res.status(500).json({ message: 'Erreur du serveur', error: error.message });
     }
@@ -110,4 +169,6 @@ module.exports = {
   getConversations,
   getMessages,
   sendMessage,
+  deleteMessage, // <-- On exporte la nouvelle fonction
+  updateMessage, // <-- On exporte la nouvelle fonction
 };

@@ -2,6 +2,7 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
+const Notification = require('../models/Notification'); // On s'assure que l'import est là
 const { getIo, emitToUser } = require('../socket');
 
 // @desc    Obtenir toutes les conversations d'un utilisateur
@@ -89,11 +90,20 @@ const sendMessage = async (req, res) => {
         };
         await conversation.save();
         
-        // On peuple l'info du sender avant de l'envoyer par socket
         const populatedMessage = await Message.findById(newMessage._id).populate('senderId', 'prenom');
         
+        // --- LOGIQUE DE NOTIFICATION AJOUTÉE ICI ---
+        await Notification.create({
+            recipient: recipientId,
+            message: `Vous avez un nouveau message de ${populatedMessage.senderId.prenom}.`,
+            type: 'autre',
+            link: `/messages`
+        });
+        // --- FIN DE LA LOGIQUE DE NOTIFICATION ---
+
         const recipient = conversation.participants.find(p => p.toString() !== senderId.toString());
         emitToUser(recipient.toString(), 'new_message', populatedMessage);
+        emitToUser(recipient.toString(), 'new_notification'); // On dit à la cloche de se mettre à jour
 
         res.status(201).json(populatedMessage);
 
@@ -169,6 +179,6 @@ module.exports = {
   getConversations,
   getMessages,
   sendMessage,
-  deleteMessage, // <-- On exporte la nouvelle fonction
-  updateMessage, // <-- On exporte la nouvelle fonction
+  deleteMessage,
+  updateMessage,
 };
